@@ -35,9 +35,17 @@ mysql -u username -p database_name < ../migrations/waitlist-migration.sql
 
 ### 2. Configuration
 
-**If integrated with main app:** No additional configuration needed.
+**If integrated with main app:**
 
-**If standalone:** Edit `waitlist-signup.php` and update:
+The landing page looks for `/app/config.php` to integrate with the main application. Ensure your app files are in the `/app` directory:
+
+```
+/app/config.php
+/app/cls/EmailService.php (for Phase 2 email integration)
+/app/includes/ebiz-autoload.php
+```
+
+**If standalone:** Edit `waitlist-signup.php`, `admin.php`, and `export-waitlist.php` to update:
 
 ```php
 define('WAITLIST_DB_HOST', 'localhost');

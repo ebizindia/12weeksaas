@@ -5,6 +5,30 @@
 
 ---
 
+## 📁 Directory Structure
+
+The landing page expects the main application files to be in `/app`:
+
+```
+/app/
+  ├── config.php                    # Main application config
+  ├── cls/
+  │   └── EmailService.php          # (Optional) Phase 2 email service
+  └── includes/
+      └── ebiz-autoload.php         # Autoloader
+
+/landing/
+  ├── index.php                     # Landing page
+  ├── admin.php                     # Admin dashboard
+  ├── waitlist-signup.php           # Signup handler
+  ├── thank-you.php                 # Confirmation page
+  └── export-waitlist.php           # CSV export
+```
+
+**Note:** The landing page can work standalone (without /app) by using basic PHP mail() and standalone database config.
+
+---
+
 ## 🚀 Quick Setup (5 Minutes)
 
 ### Step 1: Database Setup
@@ -93,7 +117,9 @@ Fill out the waitlist form and verify:
 
 If you've set up Phase 2 SMTP, emails will automatically use EmailService.
 
-**Verify config.php has:**
+The landing page looks for `/app/config.php` to integrate with the main application.
+
+**Verify /app/config.php has:**
 ```php
 define('CONST_SMTP_HOST', 'smtp.gmail.com');
 define('CONST_SMTP_USERNAME', 'your-email@gmail.com');

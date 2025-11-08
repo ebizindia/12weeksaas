@@ -7,7 +7,7 @@
 header('Content-Type: application/json');
 
 // Include main config if available, or use standalone config
-$config_file = dirname(__DIR__) . '/config.php';
+$config_file = '/app/config.php';
 if (file_exists($config_file)) {
     require_once $config_file;
     require_once CONST_INCLUDES_DIR . '/ebiz-autoload.php';
