@@ -83,7 +83,14 @@
 										<span>&ndash;</span> <span class="submenu-text">My Profile</span>
 									</a>
 								</li>
-							<?php	
+								<?php if(defined('CONST_SAAS_MODE') && CONST_SAAS_MODE): ?>
+								<li data-placement="right" data-html="true" title="Account Settings"  data-container="body" class="menu-icon-settings <?php echo (strtolower($this->base_template_data['module_name']) == 'account-settings')? 'active' : '';?>" >
+									<a href="<?php echo CONST_APP_ABSURL; ?>/account-settings.php" >
+										<span>&ndash;</span> <span class="submenu-text">Account Settings</span>
+									</a>
+								</li>
+								<?php endif; ?>
+							<?php
 
 							}
 
