@@ -84,9 +84,12 @@
                   I forgot my password
                 </a>
               </div>
-              <!-- <div class="col-sm-12 text-center mt-3">
-                New user? <strong><a href="<?php echo $this->body_template_data['root_uri']; ?>register/" class="forgot-password-link">Register Now</a></strong>
-              </div> -->
+
+              <?php if (defined('CONST_ENABLE_SIGNUP') && CONST_ENABLE_SIGNUP): ?>
+              <div class="col-sm-12 text-center mt-3">
+                New user? <strong><a href="<?php echo CONST_APP_URL; ?>/signup.php" class="forgot-password-link">Create Account</a></strong>
+              </div>
+              <?php endif; ?>
             </div>
 
             </form>
