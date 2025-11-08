@@ -30,7 +30,7 @@ Professional landing page with waitlist functionality for www.12weekedge.com
 Run the waitlist migration:
 
 ```bash
-mysql -u username -p database_name < ../migrations/waitlist-migration.sql
+mysql -u username -p database_name < migrations/waitlist-migration.sql
 ```
 
 ### 2. Configuration
@@ -71,19 +71,26 @@ Use a strong password for production.
 ## File Structure
 
 ```
-landing/
+/ (root - landing page files)
 ├── index.php                  # Main landing page
 ├── waitlist-signup.php        # Waitlist signup handler (AJAX)
 ├── thank-you.php             # Thank you page after signup
 ├── admin.php                 # Admin dashboard
 ├── export-waitlist.php       # CSV export
-└── README.md                 # This file
+├── LANDING-PAGE-README.md    # This file
+└── migrations/
+    └── waitlist-migration.sql
+
+/app (application files)
+├── login.php                  # App login
+├── config.php                # App config
+└── ...                       # Other app files
 ```
 
 ## Pages
 
 ### index.php
-**URL:** `www.12weekedge.com/landing/` or `www.12weekedge.com/`
+**URL:** `www.12weekedge.com/` or `www.12weekedge.com/`
 
 Main landing page with:
 - Hero section with waitlist form
@@ -95,7 +102,7 @@ Main landing page with:
 - Final CTA
 
 ### thank-you.php
-**URL:** `www.12weekedge.com/landing/thank-you.php`
+**URL:** `www.12weekedge.com/thank-you.php`
 
 Shown after successful waitlist signup. Displays:
 - Success confirmation
@@ -104,7 +111,7 @@ Shown after successful waitlist signup. Displays:
 - Next steps
 
 ### admin.php
-**URL:** `www.12weekedge.com/landing/admin.php`
+**URL:** `www.12weekedge.com/admin.php`
 
 Admin dashboard to:
 - View all waitlist entries

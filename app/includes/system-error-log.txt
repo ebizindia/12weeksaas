@@ -1,0 +1,26 @@
+Log Date & time: 08-11-2025 06:58:33
+IP: 
+Referer: 
+User agent: 
+Error msg: SQLSTATE[HY000] [2002] No such file or directory
+Error code: 2002
+URL: http://example.com
+File: /home/user/12weeksaas/cls/PDOConn.php | Line: 42
+Trace: #0 /home/user/12weeksaas/cls/PDOConn.php(42): PDO->__construct()
+#1 /home/user/12weeksaas/migrations/run-phase1-migration.php(50): eBizIndia\PDOConn::connectToDB()
+#2 {main}
+*****************************
+
+Log Date & time: 08-11-2025 07:39:38
+IP: 
+Referer: 
+User agent: 
+Error msg: SQLSTATE[HY000] [2002] No such file or directory
+Error code: 2002
+URL: http://example.com
+File: /home/user/12weeksaas/cls/PDOConn.php | Line: 42
+Trace: #0 /home/user/12weeksaas/cls/PDOConn.php(42): PDO->__construct()
+#1 /home/user/12weeksaas/migrations/run-phase1-migration.php(50): eBizIndia\PDOConn::connectToDB()
+#2 {main}
+*****************************
+

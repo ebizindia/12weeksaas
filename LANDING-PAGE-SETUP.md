@@ -7,22 +7,29 @@
 
 ## 📁 Directory Structure
 
-The landing page expects the main application files to be in `/app`:
+The repository is organized with landing page files at the root and application files in `/app`:
 
 ```
-/app/
-  ├── config.php                    # Main application config
-  ├── cls/
-  │   └── EmailService.php          # (Optional) Phase 2 email service
-  └── includes/
-      └── ebiz-autoload.php         # Autoloader
-
-/landing/
+/                                   # Landing page files (root)
   ├── index.php                     # Landing page
-  ├── admin.php                     # Admin dashboard
+  ├── admin.php                     # Waitlist admin dashboard
   ├── waitlist-signup.php           # Signup handler
   ├── thank-you.php                 # Confirmation page
-  └── export-waitlist.php           # CSV export
+  ├── export-waitlist.php           # CSV export
+  ├── migrations/
+  │   └── waitlist-migration.sql    # Waitlist database schema
+  └── LANDING-PAGE-*.md             # Landing page documentation
+
+/app/                               # Main application files
+  ├── config.php                    # Main application config
+  ├── login.php                     # Application login
+  ├── 12-week-*.php                 # 12-week app pages
+  ├── cls/
+  │   └── EmailService.php          # (Optional) Phase 2 email service
+  ├── includes/
+  │   └── ebiz-autoload.php         # Autoloader
+  ├── migrations/                   # App migrations
+  └── docs/                         # App documentation
 ```
 
 **Note:** The landing page can work standalone (without /app) by using basic PHP mail() and standalone database config.
@@ -44,7 +51,7 @@ This creates the `waitlist` table.
 
 ### Step 2: Change Admin Password
 
-**CRITICAL:** Edit `landing/admin.php` line 10:
+**CRITICAL:** Edit `admin.php` line 10:
 
 ```php
 $admin_password = 'YOUR_STRONG_PASSWORD_HERE'; // Change from 'changeme123'
@@ -56,20 +63,20 @@ Point your domain to the landing page:
 
 **Option A: Subdomain**
 ```
-www.12weekedge.com → /path/to/12weeksaas/landing/
+www.12weekedge.com → /path/to/12weeksaas/
 ```
 
 **Option B: Main Domain**
 ```
-12weekedge.com → /path/to/12weeksaas/landing/
+12weekedge.com → /path/to/12weeksaas/
 ```
 
 **Option C: Apache Virtual Host**
 ```apache
 <VirtualHost *:80>
     ServerName www.12weekedge.com
-    DocumentRoot /path/to/12weeksaas/landing
-    <Directory /path/to/12weeksaas/landing>
+    DocumentRoot /path/to/12weeksaas
+    <Directory /path/to/12weeksaas>
         AllowOverride All
         Require all granted
     </Directory>
@@ -81,7 +88,7 @@ www.12weekedge.com → /path/to/12weeksaas/landing/
 server {
     listen 80;
     server_name www.12weekedge.com;
-    root /path/to/12weeksaas/landing;
+    root /path/to/12weeksaas;
     index index.php;
 
     location / {
@@ -156,7 +163,7 @@ URL: `http://www.12weekedge.com/admin.php`
 
 ### Change Password
 
-Edit `landing/admin.php`:
+Edit `admin.php`:
 
 ```php
 $admin_password = 'YOUR_STRONG_PASSWORD';
@@ -209,7 +216,7 @@ When launching, bulk create accounts:
 
 ### Update Statistics
 
-Edit `landing/index.php` around line 250:
+Edit `index.php` around line 250:
 
 ```html
 <span class="stat-number">4x</span>
@@ -220,7 +227,7 @@ Change numbers based on real data.
 
 ### Update Testimonials
 
-Edit `landing/index.php` around line 850:
+Edit `index.php` around line 850:
 
 ```html
 <div class="testimonial-text">
@@ -232,7 +239,7 @@ Edit `landing/index.php` around line 850:
 
 ### Update Pricing
 
-Edit `landing/index.php` around line 1000:
+Edit `index.php` around line 1000:
 
 ```html
 <div class="pricing-amount">$29</div>
@@ -241,7 +248,7 @@ Edit `landing/index.php` around line 1000:
 
 ### Change Colors
 
-Edit CSS variables in `landing/index.php`:
+Edit CSS variables in `index.php`:
 
 ```css
 :root {
@@ -252,7 +259,7 @@ Edit CSS variables in `landing/index.php`:
 
 ### Update Content
 
-All content is in `landing/index.php`. Search for:
+All content is in `index.php`. Search for:
 - Hero title
 - Feature descriptions
 - Problem-solution text
@@ -264,7 +271,7 @@ All content is in `landing/index.php`. Search for:
 
 ### Add Google Analytics
 
-Insert before `</head>` in `landing/index.php`:
+Insert before `</head>` in `index.php`:
 
 ```html
 <!-- Google Analytics -->
@@ -367,7 +374,7 @@ define('CONST_APP_URL', 'https://www.12weekedge.com');
 
 ### Open Graph Tags
 
-Already included in `landing/index.php`:
+Already included in `index.php`:
 
 ```html
 <meta property="og:title" content="12 Week Edge - Achieve More in 12 Weeks">
@@ -514,20 +521,28 @@ Columns exported:
 
 ### Documentation
 
-- Landing page: `landing/README.md`
+- Landing page: `LANDING-PAGE-README.md`
 - This guide: `LANDING-PAGE-SETUP.md`
 - Phase 2 guide: `PHASE2-DEPLOYMENT-GUIDE.md`
 
 ### File Structure
 
 ```
-landing/
-├── index.php              # Main landing page
-├── waitlist-signup.php    # Signup handler
-├── thank-you.php         # Confirmation page
-├── admin.php             # Admin dashboard
-├── export-waitlist.php   # CSV export
-└── README.md             # Detailed docs
+/ (root - landing page files)
+├── index.php                  # Main landing page
+├── waitlist-signup.php        # Signup handler
+├── thank-you.php             # Confirmation page
+├── admin.php                 # Admin dashboard
+├── export-waitlist.php       # CSV export
+├── LANDING-PAGE-README.md    # Detailed docs
+└── migrations/
+    └── waitlist-migration.sql
+
+/app (application files)
+├── login.php                  # App login
+├── 12-week-*.php             # App pages
+├── config.php                # App config
+└── ...                       # Other app files
 ```
 
 ---
