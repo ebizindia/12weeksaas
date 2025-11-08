@@ -12,7 +12,8 @@ $page_title = "Progress Report - 12-Week Year";
 $page_description = "Detailed analytics and progress tracking";
 
 $user_id = $loggedindata[0]['id'];
-$is_admin = ($loggedindata[0]['profile_details']['assigned_roles'][0]['role'] === 'ADMIN');
+// Phase 1: Individual SaaS mode - always show only own data
+$is_admin = false;
 
 // Get selected cycle (default to active cycle)
 $selected_cycle_id = (int)($_GET['cycle_id'] ?? 0);

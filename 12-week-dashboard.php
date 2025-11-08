@@ -29,7 +29,7 @@ $dashboard_data = [
 ];
 
 if (!$current_cycle) {
-    $dashboard_data['error_message'] = "No active 12-week cycle found. Please contact your administrator to create a new cycle.";
+    $dashboard_data['error_message'] = "No active 12-week cycle found. Create your first cycle to get started with your 12-week planning.";
 } else {
     // Calculate current week and days remaining
     $start_date = new DateTime($current_cycle['start_date']);

@@ -49,46 +49,49 @@ if (!$current_cycle) {
     ]);
     $leaderboard_data['user_position'] = $user_position_stmt->fetch(PDO::FETCH_ASSOC);
     
-    // Get top performers by category
-    $top_performers_sql = "(SELECT 
+    // Get top performers by category (Phase 1: Use display_name for privacy)
+    $top_performers_sql = "(SELECT
                              'Points Leader' as category,
-                             u.username, m.name,
+                             u.username,
+                             COALESCE(NULLIF(m.display_name, ''), CONCAT(m.fname, ' ', m.lname)) as name,
                              ls.total_points as value,
                              'trophy-gold.png' as icon,
                              'warning' as color
                            FROM leaderboard_stats ls
                            JOIN users u ON ls.user_id = u.id
-                           JOIN members m ON u.profile_id=m.id
+                           JOIN members m ON u.user_acnt_id=m.user_acnt_id
                            WHERE ls.cycle_id = :cycle_id AND ls.is_visible = 1
                            ORDER BY ls.total_points DESC
                            LIMIT 1)
-                           
+
                            UNION ALL
-                           
-                           (SELECT 
+
+                           (SELECT
                              'Completion Leader' as category,
-                             u.username, m.name,
+                             u.username,
+                             COALESCE(NULLIF(m.display_name, ''), CONCAT(m.fname, ' ', m.lname)) as name,
                              ls.completion_rate as value,
                              'chart-line-green.png' as icon,
                              'success' as color
                            FROM leaderboard_stats ls
                            JOIN users u ON ls.user_id = u.id
-                           JOIN members m ON u.profile_id=m.id
+                           JOIN members m ON u.user_acnt_id=m.user_acnt_id
                            WHERE ls.cycle_id = :cycle_id AND ls.is_visible = 1
                            ORDER BY ls.completion_rate DESC
                            LIMIT 1)
-                           
+
                            UNION ALL
-                           
-                           (SELECT 
+
+                           (SELECT
                              'Streak Leader' as category,
-                             u.username, m.name, 
+                             u.username,
+                             COALESCE(NULLIF(m.display_name, ''), CONCAT(m.fname, ' ', m.lname)) as name,
                              ls.current_streak as value,
                              'fire-red.png' as icon,
                              'danger' as color
                            FROM leaderboard_stats ls
                            JOIN users u ON ls.user_id = u.id
-                           JOIN members m ON u.profile_id=m.id
+                           JOIN members m ON u.user_acnt_id=m.user_acnt_id
                            WHERE ls.cycle_id = :cycle_id AND ls.is_visible = 1
                            ORDER BY ls.current_streak DESC
                            LIMIT 1)";
@@ -96,31 +99,33 @@ if (!$current_cycle) {
     $top_performers_stmt = \eBizIndia\PDOConn::query($top_performers_sql, [':cycle_id' => $current_cycle['id']]);
     $leaderboard_data['top_performers'] = $top_performers_stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    // Get achievement leaders
-    $achievement_leaders_sql = "SELECT 
-                                  u.username, m.name,
+    // Get achievement leaders (Phase 1: Use display_name for privacy)
+    $achievement_leaders_sql = "SELECT
+                                  u.username,
+                                  COALESCE(NULLIF(m.display_name, ''), CONCAT(m.fname, ' ', m.lname)) as name,
                                   ls.achievements_count,
                                   ls.total_points,
                                   ls.rank_position
                                 FROM leaderboard_stats ls
                                 JOIN users u ON ls.user_id = u.id
-                                JOIN members m ON u.profile_id=m.id
+                                JOIN members m ON u.user_acnt_id=m.user_acnt_id
                                 WHERE ls.cycle_id = :cycle_id AND ls.is_visible = 1
                                 ORDER BY ls.achievements_count DESC, ls.total_points DESC
                                 LIMIT 5";
-    
+
     $achievement_leaders_stmt = \eBizIndia\PDOConn::query($achievement_leaders_sql, [':cycle_id' => $current_cycle['id']]);
     $leaderboard_data['achievement_leaders'] = $achievement_leaders_stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    // Get streak leaders
-    $streak_leaders_sql = "SELECT 
-                             u.username, m.name,
+
+    // Get streak leaders (Phase 1: Use display_name for privacy)
+    $streak_leaders_sql = "SELECT
+                             u.username,
+                             COALESCE(NULLIF(m.display_name, ''), CONCAT(m.fname, ' ', m.lname)) as name,
                              ls.current_streak,
                              ls.total_points,
                              ls.rank_position
                            FROM leaderboard_stats ls
                            JOIN users u ON ls.user_id = u.id
-                           JOIN members m ON u.profile_id=m.id
+                           JOIN members m ON u.user_acnt_id=m.user_acnt_id
                            WHERE ls.cycle_id = :cycle_id AND ls.is_visible = 1 AND ls.current_streak > 0
                            ORDER BY ls.current_streak DESC, ls.total_points DESC
                            LIMIT 5";
