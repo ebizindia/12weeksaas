@@ -348,9 +348,9 @@ if(isset($_POST['mode']) && $_POST['mode']=="login"){
 	}else if(empty($new_passwordre)){
 		$response['errorcode']=61;
 		$response['msg']="Please re-enter the new password to confirm.";
-	}else if(strlen($new_password) < 8){
+	}else if(strlen($new_password) < 6){
 		$response['errorcode']=62;
-		$response['msg']="Password must be at least 8 characters long.";
+		$response['msg']="Password must be at least 6 characters long.";
 	}else if($new_password === $new_passwordre){
 
 		$options=[];
@@ -490,9 +490,9 @@ if(isset($_POST['mode']) && $_POST['mode']=="login"){
 	}else if(empty($new_passwordre)){
 		$response['errorcode']=61;
 		$response['msg']="Please re-enter the new password to confirm.";
-	}else if(strlen($new_password) < 8){
+	}else if(strlen($new_password) < 6){
 		$response['errorcode']=62;
-		$response['msg']="Password must be at least 8 characters long.";
+		$response['msg']="Password must be at least 6 characters long.";
 	}elseif($new_password === $new_passwordre){
 
 		$options=[];

@@ -204,9 +204,9 @@ class Member{
 				$result['error_code']=2;
 				$result['message'][]="Invalid role selected.";
 				$result['error_fields'][]="#add_form_field_role_REGULAR";
-			}else if($mode!=='reg' && $mode!=='regupdate' && !empty($data['password']) && mb_strlen($data['password']) < 8){
+			}else if($mode!=='reg' && $mode!=='regupdate' && !empty($data['password']) && mb_strlen($data['password']) < 6){
 				$result['error_code']=2;
-				$result['message'][]="Password must be at least 8 characters long.";
+				$result['message'][]="Password must be at least 6 characters long.";
 				$result['error_fields'][]="#add_form_field_password";
 			}else if($mode!=='reg' && $mode!=='regupdate' && !empty($data['password']) && !empty($other_data['field_meta']['pswd']['len']) && mb_strlen($data['password'])>!empty($other_data['field_meta']['pswd']['len'])){
 				$result['error_code']=2;
