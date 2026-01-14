@@ -205,7 +205,7 @@ $is_admin = $this->body_template_data['is_admin'];
                 </div>
                 <?php endif; ?>
 
-                <?php if ($error_message): ?>
+                <?php if ($error_message && !in_array($error_action, ['create_cycle', 'edit_cycle'])): ?>
                 <div class="alert alert-danger alert-dismissible fade show alert-enhanced" role="alert">
                     <i class="fas fa-exclamation-triangle mr-2"></i><?= htmlspecialchars($error_message) ?>
                     <button type="button" class="close" data-dismiss="alert" aria-label="Close">
