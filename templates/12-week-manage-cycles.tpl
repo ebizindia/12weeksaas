@@ -369,6 +369,13 @@ $is_admin = $this->body_template_data['is_admin'];
                 </div>
                 
                 <div class="modal-body">
+                    <div class="alert alert-danger alert-dismissible fade show alert-enhanced" role="alert" id="createCycleError" style="display: none;">
+                        <i class="fas fa-exclamation-triangle mr-2"></i><span class="error-message"></span>
+                        <button type="button" class="close" onclick="$('#createCycleError').hide();">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+
                     <div class="form-group">
                         <label for="name"><i class="fas fa-tag mr-1"></i>Cycle Name <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="name" name="name" required maxlength="100" placeholder="e.g., Q1 2025 Cycle">
@@ -420,6 +427,13 @@ $is_admin = $this->body_template_data['is_admin'];
                 </div>
                 
                 <div class="modal-body">
+                    <div class="alert alert-danger alert-dismissible fade show alert-enhanced" role="alert" id="editCycleError" style="display: none;">
+                        <i class="fas fa-exclamation-triangle mr-2"></i><span class="error-message"></span>
+                        <button type="button" class="close" onclick="$('#editCycleError').hide();">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+
                     <div class="form-group">
                         <label for="edit_name"><i class="fas fa-tag mr-1"></i>Cycle Name <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="edit_name" name="name" required maxlength="100">

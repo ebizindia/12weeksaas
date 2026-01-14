@@ -25,7 +25,8 @@ $error_message = '';
 // Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
-    
+    $is_ajax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest';
+
     try {
         $conn = \eBizIndia\PDOConn::getInstance();
         
@@ -76,8 +77,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         ':end_date' => $end_date,
                         ':created_by' => $user_id
                     ]);
-                    
+
                     $success_message = "Cycle '{$name}' created successfully! It will run from {$start_date} to {$end_date}.";
+
+                    if ($is_ajax) {
+                        header('Content-Type: application/json');
+                        echo json_encode(['success' => true, 'message' => $success_message]);
+                        exit;
+                    }
                 }
                 break;
                 
@@ -131,8 +138,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         ':end_date' => $end_date,
                         ':cycle_id' => $cycle_id
                     ]);
-                    
+
                     $success_message = "Cycle updated successfully!";
+
+                    if ($is_ajax) {
+                        header('Content-Type: application/json');
+                        echo json_encode(['success' => true, 'message' => $success_message]);
+                        exit;
+                    }
                 }
                 break;
                 
@@ -153,6 +166,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } catch (Exception $e) {
         $error_message = $e->getMessage();
+
+        if ($is_ajax) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => $error_message]);
+            exit;
+        }
     }
 }
 
@@ -213,46 +232,107 @@ var CycleManager = {
     init: function() {
         this.bindEvents();
     },
-    
+
     bindEvents: function() {
+        var self = this;
+
         // Edit cycle modal
         $(document).on("click", ".btn-edit-cycle", function() {
             var cycleId = $(this).data("cycle-id");
             var name = $(this).data("name");
             var startDate = $(this).data("start-date");
-            
+
             $("#editCycleModal #edit_cycle_id").val(cycleId);
             $("#editCycleModal #edit_name").val(name);
             $("#editCycleModal #edit_start_date").val(startDate);
+            $("#editCycleError").hide();
             $("#editCycleModal").modal("show");
         });
-        
+
         // Close cycle confirmation
         $(document).on("click", ".btn-close-cycle", function() {
             var cycleId = $(this).data("cycle-id");
             var name = $(this).data("name");
-            
+
             if (confirm("Are you sure you want to close the cycle: " + name + "?\\n\\nThis will mark it as completed and members will no longer be able to add goals or tasks.")) {
                 $("#closeCycleForm #close_cycle_id").val(cycleId);
                 $("#closeCycleForm").submit();
             }
         });
-        
-        // Reactivation removed - cycles are now automatically determined by dates
-        
+
+        // Create cycle form submission
+        $("#createCycleForm").on("submit", function(e) {
+            e.preventDefault();
+            self.submitForm($(this), "#createCycleError");
+        });
+
+        // Edit cycle form submission
+        $("#editCycleForm").on("submit", function(e) {
+            e.preventDefault();
+            self.submitForm($(this), "#editCycleError");
+        });
+
         // Clear modals on close
         $(".modal").on("hidden.bs.modal", function() {
             $(this).find("form")[0].reset();
+            $(this).find(".alert-danger").hide();
         });
-        
+
+        // Clear errors when modal opens
+        $(".modal").on("show.bs.modal", function() {
+            $(this).find(".alert-danger").hide();
+        });
+
         // Validate start date is Monday
         $(document).on("change", "input[type=date]", function() {
             var selectedDate = new Date($(this).val());
             var dayOfWeek = selectedDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
-            
+
             if (dayOfWeek !== 1) { // Not Monday
                 alert("Start date must be a Monday. Please select a Monday.");
                 $(this).focus();
+            }
+        });
+    },
+
+    submitForm: function($form, errorContainerId) {
+        var submitBtn = $form.find("button[type=submit]");
+        var originalText = submitBtn.html();
+
+        // Disable submit button and show loading
+        submitBtn.prop("disabled", true).html("<i class=\"fas fa-spinner fa-spin mr-2\"></i>Processing...");
+
+        // Hide any existing errors
+        $(errorContainerId).hide();
+
+        $.ajax({
+            url: window.location.href,
+            type: "POST",
+            data: $form.serialize(),
+            dataType: "json",
+            headers: {
+                "X-Requested-With": "XMLHttpRequest"
+            },
+            success: function(response) {
+                if (response.success) {
+                    // Success - reload the page to show updated data
+                    window.location.reload();
+                } else {
+                    // Show error in modal
+                    $(errorContainerId).find(".error-message").text(response.message);
+                    $(errorContainerId).show();
+                    submitBtn.prop("disabled", false).html(originalText);
+                }
+            },
+            error: function(xhr, status, error) {
+                // Show generic error message
+                var errorMsg = "An error occurred. Please try again.";
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMsg = xhr.responseJSON.message;
+                }
+                $(errorContainerId).find(".error-message").text(errorMsg);
+                $(errorContainerId).show();
+                submitBtn.prop("disabled", false).html(originalText);
             }
         });
     }
