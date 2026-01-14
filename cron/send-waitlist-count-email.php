@@ -1,5 +1,5 @@
-#!/usr/bin/env php
 <?php
+#!/usr/bin/env php
 /**
  * Daily Waitlist Count Email Script
  *
@@ -19,16 +19,17 @@ echo "Started at: " . date('Y-m-d H:i:s') . "\n\n";
 
 try {
     // Check if config.php exists
-    $config_file = __DIR__ . "/../config.php";
+    $config_file = __DIR__ . "/../app/config.php";
+    echo $config_file;
     if (!file_exists($config_file)) {
         throw new Exception("Configuration file not found. Please copy config-sample.php to config.php and update settings.");
     }
-
+    
     // Bootstrap the application
-    require_once(__DIR__ . "/../config.php");
+    require_once(__DIR__ . "/../app/config.php");
     require_once(CONST_INCLUDES_DIR . "/ebiz-autoload.php");
+    require_once(CONST_INCLUDES_DIR . "/general-func.php");
     require_once(CONST_CLASS_DIR . "/phpmailer/vendor/autoload.php");
-
     // Initialize database connection
     $conn = \eBizIndia\PDOConn::getInstance();
     echo "✓ Database connection established\n";
@@ -150,7 +151,6 @@ Time: " . date('g:i A') . "
 
     // Initialize mailer
     $mail = new \eBizIndia\Mailer(true, ['use_default' => CONST_USE_SERVERS_DEFAULT_SMTP]);
-
     // Override email if configured (for testing)
     if (!empty(CONST_EMAIL_OVERRIDE)) {
         $override_emails = is_array(CONST_EMAIL_OVERRIDE)
@@ -180,7 +180,7 @@ Time: " . date('g:i A') . "
 
     // Send email
     $result = $mail->sendEmail($message_data, $other_data);
-
+    
     if ($result) {
         echo "✓ Email sent successfully to: " . implode(', ', CONST_WAITLIST_REPORT_RECP['to']) . "\n";
         echo "\n=== Script completed successfully ===\n";
