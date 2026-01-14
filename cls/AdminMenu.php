@@ -1290,7 +1290,7 @@ select u.id FROM `".CONST_TBL_PREFIX."users` u JOIN `".CONST_TBL_PREFIX."menu_as
 				ErrorHandler::logError($error_details_to_log,$e);	
 			else
 				ErrorHandler::logError($error_details_to_log);	
-			die('aaa');
+			
 			return [];
 
 		}
