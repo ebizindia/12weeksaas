@@ -1,6 +1,8 @@
 <?php
 $success_message = $this->body_template_data['success_message'];
 $error_message = $this->body_template_data['error_message'];
+$error_action = $this->body_template_data['error_action'];
+$error_form_data = $this->body_template_data['error_form_data'];
 $cycles = $this->body_template_data['cycles'];
 $allowed_menu_perms = $this->body_template_data['allowed_menu_perms'];
 $is_admin = $this->body_template_data['is_admin'];
@@ -203,13 +205,26 @@ $is_admin = $this->body_template_data['is_admin'];
                 </div>
                 <?php endif; ?>
 
-                <?php if ($error_message): ?>
+                <?php if ($error_message && !in_array($error_action, ['create_cycle', 'edit_cycle'])): ?>
                 <div class="alert alert-danger alert-dismissible fade show alert-enhanced" role="alert">
                     <i class="fas fa-exclamation-triangle mr-2"></i><?= htmlspecialchars($error_message) ?>
                     <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
+                <?php endif; ?>
+
+                <!-- Hidden fields for error handling in modals -->
+                <input type="hidden" id="errorAction" value="<?= htmlspecialchars($error_action) ?>">
+                <input type="hidden" id="errorMessage" value="<?= htmlspecialchars($error_message) ?>">
+                <?php if ($error_action === 'edit_cycle'): ?>
+                <input type="hidden" id="errorCycleId" value="<?= htmlspecialchars($error_form_data['cycle_id'] ?? '') ?>">
+                <input type="hidden" id="errorCycleName" value="<?= htmlspecialchars($error_form_data['name'] ?? '') ?>">
+                <input type="hidden" id="errorCycleStartDate" value="<?= htmlspecialchars($error_form_data['start_date'] ?? '') ?>">
+                <?php endif; ?>
+                <?php if ($error_action === 'create_cycle'): ?>
+                <input type="hidden" id="errorCycleName" value="<?= htmlspecialchars($error_form_data['name'] ?? '') ?>">
+                <input type="hidden" id="errorCycleStartDate" value="<?= htmlspecialchars($error_form_data['start_date'] ?? '') ?>">
                 <?php endif; ?>
 
                 <!-- Cycles List -->

@@ -21,11 +21,12 @@ $page_description = "Create and manage 12-week cycles";
 $user_id = $loggedindata[0]['id'];
 $success_message = '';
 $error_message = '';
+$error_action = '';
+$error_form_data = [];
 
 // Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
-    $is_ajax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest';
 
     try {
         $conn = \eBizIndia\PDOConn::getInstance();
@@ -79,12 +80,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ]);
 
                     $success_message = "Cycle '{$name}' created successfully! It will run from {$start_date} to {$end_date}.";
-
-                    if ($is_ajax) {
-                        header('Content-Type: application/json');
-                        echo json_encode(['success' => true, 'message' => $success_message]);
-                        exit;
-                    }
                 }
                 break;
                 
@@ -140,12 +135,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ]);
 
                     $success_message = "Cycle updated successfully!";
-
-                    if ($is_ajax) {
-                        header('Content-Type: application/json');
-                        echo json_encode(['success' => true, 'message' => $success_message]);
-                        exit;
-                    }
                 }
                 break;
                 
@@ -166,12 +155,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } catch (Exception $e) {
         $error_message = $e->getMessage();
-
-        if ($is_ajax) {
-            header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'message' => $error_message]);
-            exit;
-        }
+        $error_action = $action;
+        $error_form_data = $_POST;
     }
 }
 
@@ -231,11 +216,10 @@ $jscode = '
 var CycleManager = {
     init: function() {
         this.bindEvents();
+        this.checkForErrors();
     },
 
     bindEvents: function() {
-        var self = this;
-
         // Edit cycle modal
         $(document).on("click", ".btn-edit-cycle", function() {
             var cycleId = $(this).data("cycle-id");
@@ -245,7 +229,6 @@ var CycleManager = {
             $("#editCycleModal #edit_cycle_id").val(cycleId);
             $("#editCycleModal #edit_name").val(name);
             $("#editCycleModal #edit_start_date").val(startDate);
-            $("#editCycleError").hide();
             $("#editCycleModal").modal("show");
         });
 
@@ -260,27 +243,9 @@ var CycleManager = {
             }
         });
 
-        // Create cycle form submission
-        $("#createCycleForm").on("submit", function(e) {
-            e.preventDefault();
-            self.submitForm($(this), "#createCycleError");
-        });
-
-        // Edit cycle form submission
-        $("#editCycleForm").on("submit", function(e) {
-            e.preventDefault();
-            self.submitForm($(this), "#editCycleError");
-        });
-
         // Clear modals on close
         $(".modal").on("hidden.bs.modal", function() {
             $(this).find("form")[0].reset();
-            $(this).find(".alert-danger").hide();
-        });
-
-        // Clear errors when modal opens
-        $(".modal").on("show.bs.modal", function() {
-            $(this).find(".alert-danger").hide();
         });
 
         // Validate start date is Monday
@@ -295,46 +260,40 @@ var CycleManager = {
         });
     },
 
-    submitForm: function($form, errorContainerId) {
-        var submitBtn = $form.find("button[type=submit]");
-        var originalText = submitBtn.html();
+    checkForErrors: function() {
+        // Check if there is an error message and which modal to reopen
+        var errorAction = $("#errorAction").val();
+        var errorMessage = $("#errorMessage").val();
 
-        // Disable submit button and show loading
-        submitBtn.prop("disabled", true).html("<i class=\"fas fa-spinner fa-spin mr-2\"></i>Processing...");
+        if (errorMessage && errorAction) {
+            if (errorAction === "create_cycle") {
+                // Repopulate create form fields
+                var name = $("#errorCycleName").val();
+                var startDate = $("#errorCycleStartDate").val();
 
-        // Hide any existing errors
-        $(errorContainerId).hide();
+                if (name) $("#createCycleModal #name").val(name);
+                if (startDate) $("#createCycleModal #start_date").val(startDate);
 
-        $.ajax({
-            url: window.location.href,
-            type: "POST",
-            data: $form.serialize(),
-            dataType: "json",
-            headers: {
-                "X-Requested-With": "XMLHttpRequest"
-            },
-            success: function(response) {
-                if (response.success) {
-                    // Success - reload the page to show updated data
-                    window.location.reload();
-                } else {
-                    // Show error in modal
-                    $(errorContainerId).find(".error-message").text(response.message);
-                    $(errorContainerId).show();
-                    submitBtn.prop("disabled", false).html(originalText);
+                $("#createCycleError .error-message").text(errorMessage);
+                $("#createCycleError").show();
+                $("#createCycleModal").modal("show");
+            } else if (errorAction === "edit_cycle") {
+                // Repopulate edit form fields
+                var editCycleId = $("#errorCycleId").val();
+                var editName = $("#errorCycleName").val();
+                var editStartDate = $("#errorCycleStartDate").val();
+
+                if (editCycleId) {
+                    $("#editCycleModal #edit_cycle_id").val(editCycleId);
+                    $("#editCycleModal #edit_name").val(editName);
+                    $("#editCycleModal #edit_start_date").val(editStartDate);
                 }
-            },
-            error: function(xhr, status, error) {
-                // Show generic error message
-                var errorMsg = "An error occurred. Please try again.";
-                if (xhr.responseJSON && xhr.responseJSON.message) {
-                    errorMsg = xhr.responseJSON.message;
-                }
-                $(errorContainerId).find(".error-message").text(errorMsg);
-                $(errorContainerId).show();
-                submitBtn.prop("disabled", false).html(originalText);
+
+                $("#editCycleError .error-message").text(errorMessage);
+                $("#editCycleError").show();
+                $("#editCycleModal").modal("show");
             }
-        });
+        }
     }
 };
 ';
@@ -345,6 +304,8 @@ $template_data = array(
     'page_description' => $page_description,
     'success_message' => $success_message,
     'error_message' => $error_message,
+    'error_action' => $error_action,
+    'error_form_data' => $error_form_data,
     'cycles' => $cycles,
     'allowed_menu_perms' => $allowed_menu_perms,
     'user_id' => $user_id,
