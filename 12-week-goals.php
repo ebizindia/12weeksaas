@@ -189,55 +189,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!in_array('ADD', $allowed_menu_perms) && !in_array('ALL', $allowed_menu_perms)) {
                     throw new Exception("You don't have permission to add tasks");
                 }
-                
+
                 $goal_id = (int)($_POST['goal_id'] ?? 0);
                 $title = trim($_POST['title'] ?? '');
                 $week_number = (int)($_POST['week_number'] ?? 0);
                 $weekly_target = (int)($_POST['weekly_target'] ?? 1);
-                
+                $is_recurring = (int)($_POST['is_recurring'] ?? 0);
+
                 if (empty($title)) {
                     throw new Exception("Task title is required");
                 }
-                
+
                 if ($week_number < 1 || $week_number > 12) {
                     throw new Exception("Week number must be between 1 and 12");
                 }
-                
+
                 if ($weekly_target < 1 || $weekly_target > 7) {
                     throw new Exception("Weekly target must be between 1 and 7 days");
                 }
-                
+
                 // Verify goal belongs to current user
                 $goalExists = \eBizIndia\TwelveWeekGoals::getGoal($goal_id, $user_id);
                 if (!$goalExists) {
                     throw new Exception("Goal not found or access denied");
                 }
-                
+
                 // Use encrypted task creation
                 $taskData = [
                     'title' => $title,
                     'goal_id' => $goal_id,
                     'week_number' => $week_number,
-                    'weekly_target' => $weekly_target
+                    'weekly_target' => $weekly_target,
+                    'is_recurring' => $is_recurring
                 ];
-                
+
                 $task_id = \eBizIndia\TwelveWeekTasks::saveTask($taskData);
-                
+
                 if (!$task_id) {
                     throw new Exception("Failed to create task. Please try again.");
                 }
-                
+
                 // Update gamification stats
                 try {
                     if (class_exists('\eBizIndia\Gamification')) {
                         // Get current cycle
-                        $cycle_sql = "SELECT c.* FROM cycles c 
-                                     JOIN goals g ON c.id = g.cycle_id 
+                        $cycle_sql = "SELECT c.* FROM cycles c
+                                     JOIN goals g ON c.id = g.cycle_id
                                      WHERE g.id = :goal_id";
                         $cycle_stmt = $conn->prepare($cycle_sql);
                         $cycle_stmt->execute([':goal_id' => $goal_id]);
                         $cycle = $cycle_stmt->fetch(PDO::FETCH_ASSOC);
-                        
+
                         if ($cycle) {
                             \eBizIndia\Gamification::updateUserStats($user_id, $cycle['id'], 'task_created', 1);
                         }
@@ -246,8 +248,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     // Log the error but don't fail the task creation
                     error_log("Gamification error: " . $gamification_error->getMessage());
                 }
-                
-                die(json_encode(['success' => true, 'task_id' => $task_id]));
+
+                // Prepare success message based on whether task is recurring
+                $response = ['success' => true, 'task_id' => $task_id];
+                if ($is_recurring == 1) {
+                    $response['message'] = 'Task added successfully! Recurring task has been copied to all future weeks in this cycle.';
+                } else {
+                    $response['message'] = 'Task added successfully!';
+                }
+
+                die(json_encode($response));
                 break;
                 
             case 'update_task_title':

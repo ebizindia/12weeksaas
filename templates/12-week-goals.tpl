@@ -1312,7 +1312,18 @@ select:focus-visible {
                         </select>
                         <small class="form-text text-muted">How many days per week should this task be completed?</small>
                     </div>
-                    
+
+                    <div class="form-group">
+                        <div class="custom-control custom-checkbox">
+                            <input type="checkbox" class="custom-control-input" id="task_recurring" name="is_recurring" value="1">
+                            <label class="custom-control-label" for="task_recurring">
+                                <i class="fas fa-redo"></i>
+                                <strong>Recurring Task</strong>
+                                <small class="d-block text-muted" style="font-weight: normal;">Automatically copy this task to the current week and all future weeks in this cycle</small>
+                            </label>
+                        </div>
+                    </div>
+
                     <div class="alert-tip">
                         <i class="fas fa-lightbulb tip-icon"></i>
                         <strong>Tip:</strong> Break down your goals into actionable weekly tasks for better tracking.

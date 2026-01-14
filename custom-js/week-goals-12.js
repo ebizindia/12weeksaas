@@ -91,15 +91,16 @@ $(document).ready(function() {
     // Add task form submission
     $("#addTaskForm").on("submit", function(e) {
         e.preventDefault();
-        
+
         var formData = {
             action: 'add_task',
             goal_id: $("#task_goal_id").val(),
             title: $("#task_title").val(),
             week_number: $("#task_week").val(),
-            weekly_target: $("#task_target").val()
+            weekly_target: $("#task_target").val(),
+            is_recurring: $("#task_recurring").is(':checked') ? 1 : 0
         };
-        
+
         $.ajax({
             url: '12-week-goals.php',
             method: 'POST',
@@ -108,9 +109,10 @@ $(document).ready(function() {
             success: function(response) {
                 if (response.success) {
                     $("#addTaskModal").modal("hide");
-                    
-                    // Show success message and reload page to show new task
-                    showAlert('success', 'Task added successfully!');
+
+                    // Show success message with recurring info if applicable
+                    var message = response.message || 'Task added successfully!';
+                    showAlert('success', message);
                     setTimeout(function() {
                         window.location=window.location
                     }, 1000);

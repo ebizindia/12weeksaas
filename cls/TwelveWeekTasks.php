@@ -46,48 +46,64 @@ class TwelveWeekTasks {
             
             if (isset($data['id']) && !empty($data['id'])) {
                 // Update existing task
-                $sql = "UPDATE tasks SET 
-                        title = :title, 
+                $sql = "UPDATE tasks SET
+                        title = :title,
                         week_number = :week_number,
                         weekly_target = :weekly_target,
+                        is_recurring = :is_recurring,
                         is_encrypted = :is_encrypted,
                         encryption_key_id = :encryption_key_id,
                         updated_at = CURRENT_TIMESTAMP
                         WHERE id = :id AND goal_id = :goal_id";
-                
+
                 $params = [
                     ':id' => $data['id'],
                     ':title' => $encryptedData['title'],
                     ':week_number' => $encryptedData['week_number'],
                     ':weekly_target' => $encryptedData['weekly_target'] ?? 3,
+                    ':is_recurring' => $encryptedData['is_recurring'] ?? 0,
                     ':goal_id' => $encryptedData['goal_id'],
                     ':is_encrypted' => $encryptedData['is_encrypted'],
                     ':encryption_key_id' => $encryptedData['encryption_key_id']
                 ];
-                
+
                 $stmt = $conn->prepare($sql);
                 $result = $stmt->execute($params);
-                
+
                 return $result ? $data['id'] : false;
-                
+
             } else {
                 // Insert new task
-                $sql = "INSERT INTO tasks (goal_id, week_number, title, weekly_target, is_encrypted, encryption_key_id) 
-                        VALUES (:goal_id, :week_number, :title, :weekly_target, :is_encrypted, :encryption_key_id)";
-                
+                $isRecurring = isset($encryptedData['is_recurring']) ? (int)$encryptedData['is_recurring'] : 0;
+
+                $sql = "INSERT INTO tasks (goal_id, week_number, title, weekly_target, is_recurring, is_encrypted, encryption_key_id)
+                        VALUES (:goal_id, :week_number, :title, :weekly_target, :is_recurring, :is_encrypted, :encryption_key_id)";
+
                 $params = [
                     ':goal_id' => $encryptedData['goal_id'],
                     ':week_number' => $encryptedData['week_number'],
                     ':title' => $encryptedData['title'],
                     ':weekly_target' => $encryptedData['weekly_target'] ?? 3,
+                    ':is_recurring' => $isRecurring,
                     ':is_encrypted' => $encryptedData['is_encrypted'],
                     ':encryption_key_id' => $encryptedData['encryption_key_id']
                 ];
-                
+
                 $stmt = $conn->prepare($sql);
                 $result = $stmt->execute($params);
-                
-                return $result ? $conn->lastInsertId() : false;
+
+                if (!$result) {
+                    return false;
+                }
+
+                $taskId = $conn->lastInsertId();
+
+                // If task is recurring, create copies for future weeks
+                if ($isRecurring == 1 && !isset($data['_skip_recurring'])) {
+                    self::createRecurringCopies($encryptedData, $taskId);
+                }
+
+                return $taskId;
             }
             
         } catch (\Exception $e) {
@@ -108,19 +124,22 @@ class TwelveWeekTasks {
      */
     public static function getTasks($goalId, $weekNumber = null) {
         try {
-            $sql = "SELECT * FROM tasks WHERE goal_id = :goal_id";
+            $sql = "SELECT id, goal_id, week_number, title, weekly_target, is_recurring,
+                           mon, tue, wed, thu, fri, sat, sun,
+                           is_encrypted, encryption_key_id, created_at, updated_at
+                    FROM tasks WHERE goal_id = :goal_id";
             $params = [':goal_id' => $goalId];
-            
+
             if ($weekNumber !== null) {
                 $sql .= " AND week_number = :week_number";
                 $params[':week_number'] = $weekNumber;
             }
-            
+
             $sql .= " ORDER BY week_number, created_at";
-            
+
             $stmt = PDOConn::query($sql, $params);
             $results = $stmt->fetchAll(\PDO::FETCH_ASSOC);
-            
+
             // Decrypt data if encrypted
             foreach ($results as &$row) {
                 if (isset($row['is_encrypted']) && $row['is_encrypted'] == 1) {
@@ -130,9 +149,9 @@ class TwelveWeekTasks {
                     }
                 }
             }
-            
+
             return $results;
-            
+
         } catch (\Exception $e) {
             ErrorHandler::logError([
                 'function' => 'TwelveWeekTasks::getTasks',
@@ -153,22 +172,25 @@ class TwelveWeekTasks {
      */
     public static function getTasksForWeek($userId, $cycleId, $weekNumber) {
         try {
-            $sql = "SELECT t.*, g.title as goal_title, g.id as goal_id, 
+            $sql = "SELECT t.id, t.goal_id, t.week_number, t.title, t.weekly_target, t.is_recurring,
+                           t.mon, t.tue, t.wed, t.thu, t.fri, t.sat, t.sun,
+                           t.is_encrypted, t.encryption_key_id, t.created_at, t.updated_at,
+                           g.title as goal_title, g.id as goal_id,
                            c.name as category_name, c.color_code, c.sort_order as category_sort
-                    FROM tasks t 
-                    JOIN goals g ON t.goal_id = g.id 
-                    JOIN categories c ON g.category_id = c.id 
+                    FROM tasks t
+                    JOIN goals g ON t.goal_id = g.id
+                    JOIN categories c ON g.category_id = c.id
                     WHERE g.user_id = :user_id AND g.cycle_id = :cycle_id AND t.week_number = :week_number
                     ORDER BY c.sort_order, c.name, g.title, t.created_at";
-            
+
             $stmt = PDOConn::query($sql, [
                 ':user_id' => $userId,
                 ':cycle_id' => $cycleId,
                 ':week_number' => $weekNumber
             ]);
-            
+
             $results = $stmt->fetchAll(\PDO::FETCH_ASSOC);
-            
+
             // Decrypt data if encrypted
             foreach ($results as &$row) {
                 if (isset($row['is_encrypted']) && $row['is_encrypted'] == 1) {
@@ -178,9 +200,9 @@ class TwelveWeekTasks {
                     }
                 }
             }
-            
+
             return $results;
-            
+
         } catch (\Exception $e) {
             ErrorHandler::logError([
                 'function' => 'TwelveWeekTasks::getTasksForWeek',
@@ -257,18 +279,21 @@ class TwelveWeekTasks {
      */
     public static function getTask($taskId, $userId) {
         try {
-            $sql = "SELECT t.*, g.title as goal_title, g.user_id 
-                    FROM tasks t 
-                    JOIN goals g ON t.goal_id = g.id 
+            $sql = "SELECT t.id, t.goal_id, t.week_number, t.title, t.weekly_target, t.is_recurring,
+                           t.mon, t.tue, t.wed, t.thu, t.fri, t.sat, t.sun,
+                           t.is_encrypted, t.encryption_key_id, t.created_at, t.updated_at,
+                           g.title as goal_title, g.user_id
+                    FROM tasks t
+                    JOIN goals g ON t.goal_id = g.id
                     WHERE t.id = :task_id AND g.user_id = :user_id";
-            
+
             $stmt = PDOConn::query($sql, [
                 ':task_id' => $taskId,
                 ':user_id' => $userId
             ]);
-            
+
             $result = $stmt->fetch(\PDO::FETCH_ASSOC);
-            
+
             if ($result) {
                 // Decrypt data if encrypted
                 if (isset($result['is_encrypted']) && $result['is_encrypted'] == 1) {
@@ -278,9 +303,9 @@ class TwelveWeekTasks {
                     }
                 }
             }
-            
+
             return $result;
-            
+
         } catch (\Exception $e) {
             ErrorHandler::logError([
                 'function' => 'TwelveWeekTasks::getTask',
@@ -340,10 +365,10 @@ class TwelveWeekTasks {
         try {
             $sql = "SELECT COUNT(*) as count FROM tasks WHERE goal_id = :goal_id";
             $stmt = PDOConn::query($sql, [':goal_id' => $goalId]);
-            
+
             $result = $stmt->fetch(\PDO::FETCH_ASSOC);
             return $result ? (int)$result['count'] : 0;
-            
+
         } catch (\Exception $e) {
             ErrorHandler::logError([
                 'function' => 'TwelveWeekTasks::getTaskCount',
@@ -351,6 +376,106 @@ class TwelveWeekTasks {
                 'error' => $e->getMessage()
             ], $e);
             return 0;
+        }
+    }
+
+    /**
+     * Create recurring copies of a task for future weeks in the current cycle
+     * @param array $encryptedData Already encrypted task data
+     * @param int $originalTaskId ID of the original task
+     * @return void
+     */
+    private static function createRecurringCopies($encryptedData, $originalTaskId) {
+        try {
+            // Get the cycle for this goal to determine current week
+            $goalSql = "SELECT g.cycle_id, c.start_date, c.end_date
+                       FROM goals g
+                       JOIN cycles c ON g.cycle_id = c.id
+                       WHERE g.id = :goal_id";
+
+            $goalStmt = PDOConn::query($goalSql, [':goal_id' => $encryptedData['goal_id']]);
+            $goalData = $goalStmt->fetch(\PDO::FETCH_ASSOC);
+
+            if (!$goalData) {
+                return; // Goal or cycle not found
+            }
+
+            // Calculate current week number
+            $cycle = [
+                'start_date' => $goalData['start_date'],
+                'end_date' => $goalData['end_date']
+            ];
+
+            // Call the global function with proper namespace
+            $currentWeek = \eBizIndia\getCurrentWeekNumber($cycle);
+
+            // If cycle hasn't started or is completed, don't create copies
+            if ($currentWeek <= 0 || $currentWeek > 12) {
+                return;
+            }
+
+            // Determine starting week for copies
+            // Start from the later of: task's week number or current week
+            $startWeek = max((int)$encryptedData['week_number'], $currentWeek);
+            $endWeek = 12; // Always 12 weeks in a cycle
+
+            // Create copies for each future week
+            $copiesCreated = 0;
+            for ($week = $startWeek; $week <= $endWeek; $week++) {
+                // Skip the original week
+                if ($week == $encryptedData['week_number']) {
+                    continue;
+                }
+
+                // Check if task already exists to prevent duplicates
+                $checkSql = "SELECT id FROM tasks
+                            WHERE goal_id = :goal_id
+                            AND week_number = :week_number
+                            AND title = :title
+                            AND is_recurring = 1";
+
+                $checkStmt = PDOConn::query($checkSql, [
+                    ':goal_id' => $encryptedData['goal_id'],
+                    ':week_number' => $week,
+                    ':title' => $encryptedData['title']
+                ]);
+
+                if ($checkStmt->fetch()) {
+                    continue; // Task already exists, skip
+                }
+
+                // Insert copy with fresh completion flags (all days = 0)
+                $copySql = "INSERT INTO tasks
+                           (goal_id, week_number, title, weekly_target, is_recurring,
+                            mon, tue, wed, thu, fri, sat, sun,
+                            is_encrypted, encryption_key_id)
+                           VALUES
+                           (:goal_id, :week_number, :title, :weekly_target, :is_recurring,
+                            0, 0, 0, 0, 0, 0, 0,
+                            :is_encrypted, :encryption_key_id)";
+
+                $copyParams = [
+                    ':goal_id' => $encryptedData['goal_id'],
+                    ':week_number' => $week,
+                    ':title' => $encryptedData['title'],
+                    ':weekly_target' => $encryptedData['weekly_target'] ?? 3,
+                    ':is_recurring' => 1,
+                    ':is_encrypted' => $encryptedData['is_encrypted'],
+                    ':encryption_key_id' => $encryptedData['encryption_key_id']
+                ];
+
+                PDOConn::query($copySql, $copyParams);
+                $copiesCreated++;
+            }
+
+        } catch (\Exception $e) {
+            ErrorHandler::logError([
+                'function' => 'TwelveWeekTasks::createRecurringCopies',
+                'task_id' => $originalTaskId,
+                'error' => $e->getMessage()
+            ], $e);
+            // Don't throw - recurring copies are a nice-to-have feature
+            // If they fail, at least the original task was saved
         }
     }
 }
