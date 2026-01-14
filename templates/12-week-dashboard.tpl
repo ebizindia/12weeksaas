@@ -356,6 +356,24 @@ body {
     font-size: 0.938rem;
 }
 
+.recurring-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #667eea;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.688rem;
+    font-weight: 600;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+
+.recurring-badge i {
+    font-size: 0.65rem;
+}
+
 .task-meta {
     display: flex;
     flex-wrap: wrap;
@@ -941,7 +959,14 @@ a:focus-visible {
                     <div class="task-list">
                         <?php foreach (array_slice($this_week_tasks, 0, 5) as $task): ?>
                         <div class="task-item">
-                            <div class="task-title"><?= htmlspecialchars($task['title']) ?></div>
+                            <div class="task-title">
+                                <?= htmlspecialchars($task['title']) ?>
+                                <?php if (isset($task['is_recurring']) && $task['is_recurring'] == 1): ?>
+                                    <span class="recurring-badge" title="This task repeats every week">
+                                        <i class="fas fa-redo"></i> Recurring
+                                    </span>
+                                <?php endif; ?>
+                            </div>
                             <div class="task-meta">
                                 <span class="task-badge" style="background-color: <?= htmlspecialchars($task['color_code']) ?>15; color: <?= htmlspecialchars($task['color_code']) ?>;">
                                     <?= htmlspecialchars($task['category_name']) ?>

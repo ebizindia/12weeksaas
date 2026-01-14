@@ -718,7 +718,7 @@ function get_tz_options()
 	$all = timezone_identifiers_list();
 	//return $all;
     $i = 0;
-	$dateTimeObj=new DateTime();
+	$dateTimeObj=new \DateTime();
 	$city=array();
 	$offset_for_sort=array();
     foreach($all AS $eachzone) {
@@ -745,7 +745,7 @@ function get_tz_options()
 
 			$city[]=$zonen[$i]['city'];
 
-			$offsetinsec=timezone_offset_get(new DateTimeZone($eachzone),$dateTimeObj);
+			$offsetinsec=timezone_offset_get(new \DateTimeZone($eachzone),$dateTimeObj);
 
 			$offset_for_sort[]=$offsetinsec;
 
@@ -845,8 +845,8 @@ function getCountries($db_conn,$status=-1){ // $status can be -1, 0 or 1
 
 
 function convertBetweenTimeZones($date_time_str, $tz_from, $tz_to, $format='Y-m-d H:i:s'){
-	$date=new DateTime($date_time_str, new DateTimeZone($tz_from));
-	$date->setTimeZone(new DateTimeZone($tz_to));
+	$date=new \DateTime($date_time_str, new \DateTimeZone($tz_from));
+	$date->setTimeZone(new \DateTimeZone($tz_to));
 	return $date->format($format);
 }
 
@@ -1135,9 +1135,9 @@ function getCurrentWeekNumber($cycle) {
     }
     
     try {
-        $start_date = new DateTime($cycle['start_date']);
-        $end_date = new DateTime($cycle['end_date']);
-        $today = new DateTime();
+        $start_date = new \DateTime($cycle['start_date']);
+        $end_date = new \DateTime($cycle['end_date']);
+        $today = new \DateTime();
         
         if ($today < $start_date) {
             return 0; // Cycle hasn't started
