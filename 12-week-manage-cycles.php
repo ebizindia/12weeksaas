@@ -48,23 +48,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if ($start_datetime->format('N') != 1) { // 1 = Monday
                         throw new Exception("Start date must be a Monday.");
                     }
-                    
+
+                    // Calculate end date (start_date + 83 days = 12 weeks)
+                    $end_datetime = clone $start_datetime;
+                    $end_datetime->add(new DateInterval('P83D'));
+                    $end_date = $end_datetime->format('Y-m-d');
+
                     // Check if there's already a cycle with overlapping dates
-                    $overlap_check_sql = "SELECT COUNT(*) FROM cycles 
+                    $overlap_check_sql = "SELECT COUNT(*) FROM cycles
                                          WHERE (start_date <= :end_date AND end_date >= :start_date)";
                     $overlap_count = \eBizIndia\PDOConn::query($overlap_check_sql, [
                         ':start_date' => $start_date,
                         ':end_date' => $end_date
                     ])->fetchColumn();
-                    
+
                     if ($overlap_count > 0) {
                         throw new Exception("There is already a cycle with overlapping dates. Cycles cannot overlap.");
                     }
-                    
-                    // Calculate end date (start_date + 83 days = 12 weeks)
-                    $end_datetime = clone $start_datetime;
-                    $end_datetime->add(new DateInterval('P83D'));
-                    $end_date = $end_datetime->format('Y-m-d');
                     
                     $insert_sql = "INSERT INTO cycles (name, start_date, end_date, created_by) 
                                    VALUES (:name, :start_date, :end_date, :created_by)";
@@ -105,9 +105,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $end_datetime = clone $start_datetime;
                     $end_datetime->add(new DateInterval('P83D'));
                     $end_date = $end_datetime->format('Y-m-d');
-                    
-                    $update_sql = "UPDATE cycles 
-                                   SET name = :name, start_date = :start_date, end_date = :end_date 
+
+                    // Check if there's already a cycle with overlapping dates (excluding current cycle)
+                    $overlap_check_sql = "SELECT COUNT(*) FROM cycles
+                                         WHERE id != :cycle_id
+                                         AND (start_date <= :end_date AND end_date >= :start_date)";
+                    $overlap_count = \eBizIndia\PDOConn::query($overlap_check_sql, [
+                        ':cycle_id' => $cycle_id,
+                        ':start_date' => $start_date,
+                        ':end_date' => $end_date
+                    ])->fetchColumn();
+
+                    if ($overlap_count > 0) {
+                        throw new Exception("There is already a cycle with overlapping dates. Cycles cannot overlap.");
+                    }
+
+                    $update_sql = "UPDATE cycles
+                                   SET name = :name, start_date = :start_date, end_date = :end_date
                                    WHERE id = :cycle_id";
                     
                     $stmt = $conn->prepare($update_sql);
