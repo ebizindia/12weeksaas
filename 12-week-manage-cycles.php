@@ -27,6 +27,7 @@ $error_form_data = [];
 // Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
+    $is_ajax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest';
 
     try {
         $conn = \eBizIndia\PDOConn::getInstance();
@@ -80,6 +81,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ]);
 
                     $success_message = "Cycle '{$name}' created successfully! It will run from {$start_date} to {$end_date}.";
+
+                    if ($is_ajax) {
+                        header('Content-Type: application/json');
+                        echo json_encode(['success' => true, 'message' => $success_message]);
+                        exit;
+                    }
                 }
                 break;
                 
@@ -135,6 +142,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ]);
 
                     $success_message = "Cycle updated successfully!";
+
+                    if ($is_ajax) {
+                        header('Content-Type: application/json');
+                        echo json_encode(['success' => true, 'message' => $success_message]);
+                        exit;
+                    }
                 }
                 break;
                 
@@ -157,6 +170,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error_message = $e->getMessage();
         $error_action = $action;
         $error_form_data = $_POST;
+
+        if ($is_ajax) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => $error_message]);
+            exit;
+        }
     }
 }
 

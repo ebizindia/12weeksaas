@@ -205,26 +205,13 @@ $is_admin = $this->body_template_data['is_admin'];
                 </div>
                 <?php endif; ?>
 
-                <?php if ($error_message && !in_array($error_action, ['create_cycle', 'edit_cycle'])): ?>
+                <?php if ($error_message): ?>
                 <div class="alert alert-danger alert-dismissible fade show alert-enhanced" role="alert">
                     <i class="fas fa-exclamation-triangle mr-2"></i><?= htmlspecialchars($error_message) ?>
                     <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
-                <?php endif; ?>
-
-                <!-- Hidden fields for error handling in modals -->
-                <input type="hidden" id="errorAction" value="<?= htmlspecialchars($error_action) ?>">
-                <input type="hidden" id="errorMessage" value="<?= htmlspecialchars($error_message) ?>">
-                <?php if ($error_action === 'edit_cycle'): ?>
-                <input type="hidden" id="errorCycleId" value="<?= htmlspecialchars($error_form_data['cycle_id'] ?? '') ?>">
-                <input type="hidden" id="errorCycleName" value="<?= htmlspecialchars($error_form_data['name'] ?? '') ?>">
-                <input type="hidden" id="errorCycleStartDate" value="<?= htmlspecialchars($error_form_data['start_date'] ?? '') ?>">
-                <?php endif; ?>
-                <?php if ($error_action === 'create_cycle'): ?>
-                <input type="hidden" id="errorCycleName" value="<?= htmlspecialchars($error_form_data['name'] ?? '') ?>">
-                <input type="hidden" id="errorCycleStartDate" value="<?= htmlspecialchars($error_form_data['start_date'] ?? '') ?>">
                 <?php endif; ?>
 
                 <!-- Cycles List -->
@@ -508,10 +495,11 @@ $is_admin = $this->body_template_data['is_admin'];
             var CycleManager = {
                 init: function() {
                     this.bindEvents();
-                    this.checkForErrors();
                 },
 
                 bindEvents: function() {
+                    var self = this;
+
                     // Edit cycle modal
                     $(document).on("click", ".btn-edit-cycle", function() {
                         var cycleId = $(this).data("cycle-id");
@@ -521,7 +509,13 @@ $is_admin = $this->body_template_data['is_admin'];
                         $("#editCycleModal #edit_cycle_id").val(cycleId);
                         $("#editCycleModal #edit_name").val(name);
                         $("#editCycleModal #edit_start_date").val(startDate);
+                        $("#editCycleError").hide();
                         $("#editCycleModal").modal("show");
+                    });
+
+                    // Create cycle button - clear errors
+                    $(document).on("click", "#btnCreateCycle, [data-target='#createCycleModal']", function() {
+                        $("#createCycleError").hide();
                     });
 
                     // Close cycle confirmation
@@ -535,9 +529,22 @@ $is_admin = $this->body_template_data['is_admin'];
                         }
                     });
 
+                    // Create cycle form submission via AJAX
+                    $("#createCycleForm").on("submit", function(e) {
+                        e.preventDefault();
+                        self.submitForm($(this), "#createCycleError", "#createCycleModal");
+                    });
+
+                    // Edit cycle form submission via AJAX
+                    $("#editCycleForm").on("submit", function(e) {
+                        e.preventDefault();
+                        self.submitForm($(this), "#editCycleError", "#editCycleModal");
+                    });
+
                     // Clear modals on close
                     $(".modal").on("hidden.bs.modal", function() {
                         $(this).find("form")[0].reset();
+                        $(this).find(".alert-danger").hide();
                     });
 
                     // Validate start date is Monday
@@ -552,40 +559,46 @@ $is_admin = $this->body_template_data['is_admin'];
                     });
                 },
 
-                checkForErrors: function() {
-                    // Check if there is an error message and which modal to reopen
-                    var errorAction = $("#errorAction").val();
-                    var errorMessage = $("#errorMessage").val();
+                submitForm: function($form, errorContainerId, modalId) {
+                    var submitBtn = $form.find("button[type=submit]");
+                    var originalText = submitBtn.html();
 
-                    if (errorMessage && errorAction) {
-                        if (errorAction === "create_cycle") {
-                            // Repopulate create form fields
-                            var name = $("#errorCycleName").val();
-                            var startDate = $("#errorCycleStartDate").val();
+                    // Disable submit button and show loading
+                    submitBtn.prop("disabled", true).html('<i class="fas fa-spinner fa-spin mr-2"></i>Processing...');
 
-                            if (name) $("#createCycleModal #name").val(name);
-                            if (startDate) $("#createCycleModal #start_date").val(startDate);
+                    // Hide any existing errors
+                    $(errorContainerId).hide();
 
-                            $("#createCycleError .error-message").text(errorMessage);
-                            $("#createCycleError").show();
-                            $("#createCycleModal").modal("show");
-                        } else if (errorAction === "edit_cycle") {
-                            // Repopulate edit form fields
-                            var editCycleId = $("#errorCycleId").val();
-                            var editName = $("#errorCycleName").val();
-                            var editStartDate = $("#errorCycleStartDate").val();
-
-                            if (editCycleId) {
-                                $("#editCycleModal #edit_cycle_id").val(editCycleId);
-                                $("#editCycleModal #edit_name").val(editName);
-                                $("#editCycleModal #edit_start_date").val(editStartDate);
+                    $.ajax({
+                        url: window.location.href,
+                        type: "POST",
+                        data: $form.serialize(),
+                        dataType: "json",
+                        headers: {
+                            "X-Requested-With": "XMLHttpRequest"
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                // Success - reload the page to show updated data
+                                window.location.reload();
+                            } else {
+                                // Show error in modal
+                                $(errorContainerId).find(".error-message").text(response.message);
+                                $(errorContainerId).show();
+                                submitBtn.prop("disabled", false).html(originalText);
                             }
-
-                            $("#editCycleError .error-message").text(errorMessage);
-                            $("#editCycleError").show();
-                            $("#editCycleModal").modal("show");
+                        },
+                        error: function(xhr, status, error) {
+                            // Show generic error message
+                            var errorMsg = "An error occurred. Please try again.";
+                            if (xhr.responseJSON && xhr.responseJSON.message) {
+                                errorMsg = xhr.responseJSON.message;
+                            }
+                            $(errorContainerId).find(".error-message").text(errorMsg);
+                            $(errorContainerId).show();
+                            submitBtn.prop("disabled", false).html(originalText);
                         }
-                    }
+                    });
                 }
             };
 
