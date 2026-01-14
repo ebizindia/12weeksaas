@@ -1,6 +1,8 @@
 <?php
 $success_message = $this->body_template_data['success_message'];
 $error_message = $this->body_template_data['error_message'];
+$error_action = $this->body_template_data['error_action'];
+$error_form_data = $this->body_template_data['error_form_data'];
 $cycles = $this->body_template_data['cycles'];
 $allowed_menu_perms = $this->body_template_data['allowed_menu_perms'];
 $is_admin = $this->body_template_data['is_admin'];
@@ -203,7 +205,7 @@ $is_admin = $this->body_template_data['is_admin'];
                 </div>
                 <?php endif; ?>
 
-                <?php if ($error_message): ?>
+                <?php if ($error_message && !in_array($error_action, ['create_cycle', 'edit_cycle'])): ?>
                 <div class="alert alert-danger alert-dismissible fade show alert-enhanced" role="alert">
                     <i class="fas fa-exclamation-triangle mr-2"></i><?= htmlspecialchars($error_message) ?>
                     <button type="button" class="close" data-dismiss="alert" aria-label="Close">
@@ -369,6 +371,13 @@ $is_admin = $this->body_template_data['is_admin'];
                 </div>
                 
                 <div class="modal-body">
+                    <div class="alert alert-danger alert-dismissible fade show alert-enhanced" role="alert" id="createCycleError" style="display: none;">
+                        <i class="fas fa-exclamation-triangle mr-2"></i><span class="error-message"></span>
+                        <button type="button" class="close" onclick="$('#createCycleError').hide();">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+
                     <div class="form-group">
                         <label for="name"><i class="fas fa-tag mr-1"></i>Cycle Name <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="name" name="name" required maxlength="100" placeholder="e.g., Q1 2025 Cycle">
@@ -420,6 +429,13 @@ $is_admin = $this->body_template_data['is_admin'];
                 </div>
                 
                 <div class="modal-body">
+                    <div class="alert alert-danger alert-dismissible fade show alert-enhanced" role="alert" id="editCycleError" style="display: none;">
+                        <i class="fas fa-exclamation-triangle mr-2"></i><span class="error-message"></span>
+                        <button type="button" class="close" onclick="$('#editCycleError').hide();">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+
                     <div class="form-group">
                         <label for="edit_name"><i class="fas fa-tag mr-1"></i>Cycle Name <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="edit_name" name="name" required maxlength="100">
@@ -467,88 +483,130 @@ $is_admin = $this->body_template_data['is_admin'];
 <?php endif; ?>
 
 <script>
-/*$(document).ready(function() {
-    console.log('Cycle management page loaded');
-    
-    // Set minimum date to today for new cycles
-    var today = new Date().toISOString().split('T')[0];
-    $('#start_date').attr('min', today);
-    
-    // Helper function to get next Monday
-    function getNextMonday() {
-        var today = new Date();
-        var daysUntilMonday = (1 + 7 - today.getDay()) % 7;
-        if (daysUntilMonday === 0 && today.getDay() !== 1) {
-            daysUntilMonday = 7;
+(function() {
+    // Wait for jQuery to be available
+    function initWhenReady() {
+        if (typeof jQuery === 'undefined') {
+            setTimeout(initWhenReady, 50);
+            return;
         }
-        var nextMonday = new Date(today.getTime() + daysUntilMonday * 24 * 60 * 60 * 1000);
-        return nextMonday.toISOString().split('T')[0];
+
+        jQuery(document).ready(function($) {
+            var CycleManager = {
+                init: function() {
+                    this.bindEvents();
+                },
+
+                bindEvents: function() {
+                    var self = this;
+
+                    // Edit cycle modal
+                    $(document).on("click", ".btn-edit-cycle", function() {
+                        var cycleId = $(this).data("cycle-id");
+                        var name = $(this).data("name");
+                        var startDate = $(this).data("start-date");
+
+                        $("#editCycleModal #edit_cycle_id").val(cycleId);
+                        $("#editCycleModal #edit_name").val(name);
+                        $("#editCycleModal #edit_start_date").val(startDate);
+                        $("#editCycleError").hide();
+                        $("#editCycleModal").modal("show");
+                    });
+
+                    // Create cycle button - clear errors
+                    $(document).on("click", "#btnCreateCycle, [data-target='#createCycleModal']", function() {
+                        $("#createCycleError").hide();
+                    });
+
+                    // Close cycle confirmation
+                    $(document).on("click", ".btn-close-cycle", function() {
+                        var cycleId = $(this).data("cycle-id");
+                        var name = $(this).data("name");
+
+                        if (confirm("Are you sure you want to close the cycle: " + name + "?\\n\\nThis will mark it as completed and members will no longer be able to add goals or tasks.")) {
+                            $("#closeCycleForm #close_cycle_id").val(cycleId);
+                            $("#closeCycleForm").submit();
+                        }
+                    });
+
+                    // Create cycle form submission via AJAX
+                    $("#createCycleForm").on("submit", function(e) {
+                        e.preventDefault();
+                        self.submitForm($(this), "#createCycleError", "#createCycleModal");
+                    });
+
+                    // Edit cycle form submission via AJAX
+                    $("#editCycleForm").on("submit", function(e) {
+                        e.preventDefault();
+                        self.submitForm($(this), "#editCycleError", "#editCycleModal");
+                    });
+
+                    // Clear modals on close
+                    $(".modal").on("hidden.bs.modal", function() {
+                        $(this).find("form")[0].reset();
+                        $(this).find(".alert-danger").hide();
+                    });
+
+                    // Validate start date is Monday
+                    $(document).on("change", "input[type=date]", function() {
+                        var selectedDate = new Date($(this).val());
+                        var dayOfWeek = selectedDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
+
+                        if (dayOfWeek !== 1) { // Not Monday
+                            alert("Start date must be a Monday. Please select a Monday.");
+                            $(this).focus();
+                        }
+                    });
+                },
+
+                submitForm: function($form, errorContainerId, modalId) {
+                    var submitBtn = $form.find("button[type=submit]");
+                    var originalText = submitBtn.html();
+
+                    // Disable submit button and show loading
+                    submitBtn.prop("disabled", true).html('<i class="fas fa-spinner fa-spin mr-2"></i>Processing...');
+
+                    // Hide any existing errors
+                    $(errorContainerId).hide();
+
+                    $.ajax({
+                        url: window.location.href,
+                        type: "POST",
+                        data: $form.serialize(),
+                        dataType: "json",
+                        headers: {
+                            "X-Requested-With": "XMLHttpRequest"
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                // Success - reload the page to show updated data
+                                window.location.reload();
+                            } else {
+                                // Show error in modal
+                                $(errorContainerId).find(".error-message").text(response.message);
+                                $(errorContainerId).show();
+                                submitBtn.prop("disabled", false).html(originalText);
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            // Show generic error message
+                            var errorMsg = "An error occurred. Please try again.";
+                            if (xhr.responseJSON && xhr.responseJSON.message) {
+                                errorMsg = xhr.responseJSON.message;
+                            }
+                            $(errorContainerId).find(".error-message").text(errorMsg);
+                            $(errorContainerId).show();
+                            submitBtn.prop("disabled", false).html(originalText);
+                        }
+                    });
+                }
+            };
+
+            // Initialize
+            CycleManager.init();
+        });
     }
-    
-    // Set default start date to next Monday
-    $('#start_date').val(getNextMonday());
-    
-    // Test modal functionality
-    $('#btnCreateCycle').click(function() {
-        console.log('Create cycle button clicked');
-        $('#createCycleModal').modal('show');
-    });
-    
-    // Edit cycle modal
-    $('.btn-edit-cycle').click(function() {
-        console.log('Edit cycle button clicked');
-        var cycleId = $(this).data('cycle-id');
-        var name = $(this).data('name');
-        var startDate = $(this).data('start-date');
-        
-        $('#editCycleModal #edit_cycle_id').val(cycleId);
-        $('#editCycleModal #edit_name').val(name);
-        $('#editCycleModal #edit_start_date').val(startDate);
-        $('#editCycleModal').modal('show');
-    });
-    
-    // Close cycle confirmation
-    $('.btn-close-cycle').click(function() {
-        var cycleId = $(this).data('cycle-id');
-        var name = $(this).data('name');
-        
-        if (confirm('Are you sure you want to close the cycle: ' + name + '?\n\nThis will mark it as completed and members will no longer be able to add goals or tasks.')) {
-            $('#closeCycleForm #close_cycle_id').val(cycleId);
-            $('#closeCycleForm').submit();
-        }
-    });
-    
-    // Reactivate cycle confirmation
-    $('.btn-reactivate-cycle').click(function() {
-        var cycleId = $(this).data('cycle-id');
-        var name = $(this).data('name');
-        
-        if (confirm('Are you sure you want to reactivate the cycle: ' + name + '?\n\nThis will make it the active cycle again.')) {
-            $('#reactivateCycleForm #reactivate_cycle_id').val(cycleId);
-            $('#reactivateCycleForm').submit();
-        }
-    });
-    
-    // Validate start date is Monday
-    $('input[type=date]').change(function() {
-        var selectedDate = new Date($(this).val());
-        var dayOfWeek = selectedDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
-        
-        if (dayOfWeek !== 1) { // Not Monday
-            alert('Start date must be a Monday. Please select a Monday.');
-            $(this).focus();
-        }
-    });
-    
-    // Form submission handling
-    $('#createCycleForm').submit(function(e) {
-        console.log('Create cycle form submitted');
-        // Let the form submit normally
-    });
-    
-    $('#editCycleForm').submit(function(e) {
-        console.log('Edit cycle form submitted');
-        // Let the form submit normally
-    });
-});*/
+
+    initWhenReady();
+})();
 </script>

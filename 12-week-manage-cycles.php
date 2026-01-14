@@ -21,11 +21,14 @@ $page_description = "Create and manage 12-week cycles";
 $user_id = $loggedindata[0]['id'];
 $success_message = '';
 $error_message = '';
+$error_action = '';
+$error_form_data = [];
 
 // Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
-    
+    $is_ajax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest';
+
     try {
         $conn = \eBizIndia\PDOConn::getInstance();
         
@@ -48,23 +51,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if ($start_datetime->format('N') != 1) { // 1 = Monday
                         throw new Exception("Start date must be a Monday.");
                     }
-                    
+
+                    // Calculate end date (start_date + 83 days = 12 weeks)
+                    $end_datetime = clone $start_datetime;
+                    $end_datetime->add(new DateInterval('P83D'));
+                    $end_date = $end_datetime->format('Y-m-d');
+
                     // Check if there's already a cycle with overlapping dates
-                    $overlap_check_sql = "SELECT COUNT(*) FROM cycles 
+                    $overlap_check_sql = "SELECT COUNT(*) FROM cycles
                                          WHERE (start_date <= :end_date AND end_date >= :start_date)";
                     $overlap_count = \eBizIndia\PDOConn::query($overlap_check_sql, [
                         ':start_date' => $start_date,
                         ':end_date' => $end_date
                     ])->fetchColumn();
-                    
+
                     if ($overlap_count > 0) {
                         throw new Exception("There is already a cycle with overlapping dates. Cycles cannot overlap.");
                     }
-                    
-                    // Calculate end date (start_date + 83 days = 12 weeks)
-                    $end_datetime = clone $start_datetime;
-                    $end_datetime->add(new DateInterval('P83D'));
-                    $end_date = $end_datetime->format('Y-m-d');
                     
                     $insert_sql = "INSERT INTO cycles (name, start_date, end_date, created_by) 
                                    VALUES (:name, :start_date, :end_date, :created_by)";
@@ -76,8 +79,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         ':end_date' => $end_date,
                         ':created_by' => $user_id
                     ]);
-                    
+
                     $success_message = "Cycle '{$name}' created successfully! It will run from {$start_date} to {$end_date}.";
+
+                    if ($is_ajax) {
+                        header('Content-Type: application/json');
+                        echo json_encode(['success' => true, 'message' => $success_message]);
+                        exit;
+                    }
                 }
                 break;
                 
@@ -105,9 +114,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $end_datetime = clone $start_datetime;
                     $end_datetime->add(new DateInterval('P83D'));
                     $end_date = $end_datetime->format('Y-m-d');
-                    
-                    $update_sql = "UPDATE cycles 
-                                   SET name = :name, start_date = :start_date, end_date = :end_date 
+
+                    // Check if there's already a cycle with overlapping dates (excluding current cycle)
+                    $overlap_check_sql = "SELECT COUNT(*) FROM cycles
+                                         WHERE id != :cycle_id
+                                         AND (start_date <= :end_date AND end_date >= :start_date)";
+                    $overlap_count = \eBizIndia\PDOConn::query($overlap_check_sql, [
+                        ':cycle_id' => $cycle_id,
+                        ':start_date' => $start_date,
+                        ':end_date' => $end_date
+                    ])->fetchColumn();
+
+                    if ($overlap_count > 0) {
+                        throw new Exception("There is already a cycle with overlapping dates. Cycles cannot overlap.");
+                    }
+
+                    $update_sql = "UPDATE cycles
+                                   SET name = :name, start_date = :start_date, end_date = :end_date
                                    WHERE id = :cycle_id";
                     
                     $stmt = $conn->prepare($update_sql);
@@ -117,8 +140,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         ':end_date' => $end_date,
                         ':cycle_id' => $cycle_id
                     ]);
-                    
+
                     $success_message = "Cycle updated successfully!";
+
+                    if ($is_ajax) {
+                        header('Content-Type: application/json');
+                        echo json_encode(['success' => true, 'message' => $success_message]);
+                        exit;
+                    }
                 }
                 break;
                 
@@ -139,6 +168,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } catch (Exception $e) {
         $error_message = $e->getMessage();
+        $error_action = $action;
+        $error_form_data = $_POST;
+
+        if ($is_ajax) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => $error_message]);
+            exit;
+        }
     }
 }
 
@@ -198,49 +235,84 @@ $jscode = '
 var CycleManager = {
     init: function() {
         this.bindEvents();
+        this.checkForErrors();
     },
-    
+
     bindEvents: function() {
         // Edit cycle modal
         $(document).on("click", ".btn-edit-cycle", function() {
             var cycleId = $(this).data("cycle-id");
             var name = $(this).data("name");
             var startDate = $(this).data("start-date");
-            
+
             $("#editCycleModal #edit_cycle_id").val(cycleId);
             $("#editCycleModal #edit_name").val(name);
             $("#editCycleModal #edit_start_date").val(startDate);
             $("#editCycleModal").modal("show");
         });
-        
+
         // Close cycle confirmation
         $(document).on("click", ".btn-close-cycle", function() {
             var cycleId = $(this).data("cycle-id");
             var name = $(this).data("name");
-            
+
             if (confirm("Are you sure you want to close the cycle: " + name + "?\\n\\nThis will mark it as completed and members will no longer be able to add goals or tasks.")) {
                 $("#closeCycleForm #close_cycle_id").val(cycleId);
                 $("#closeCycleForm").submit();
             }
         });
-        
-        // Reactivation removed - cycles are now automatically determined by dates
-        
+
         // Clear modals on close
         $(".modal").on("hidden.bs.modal", function() {
             $(this).find("form")[0].reset();
         });
-        
+
         // Validate start date is Monday
         $(document).on("change", "input[type=date]", function() {
             var selectedDate = new Date($(this).val());
             var dayOfWeek = selectedDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
-            
+
             if (dayOfWeek !== 1) { // Not Monday
                 alert("Start date must be a Monday. Please select a Monday.");
                 $(this).focus();
             }
         });
+    },
+
+    checkForErrors: function() {
+        // Check if there is an error message and which modal to reopen
+        var errorAction = $("#errorAction").val();
+        var errorMessage = $("#errorMessage").val();
+
+        if (errorMessage && errorAction) {
+            if (errorAction === "create_cycle") {
+                // Repopulate create form fields
+                var name = $("#errorCycleName").val();
+                var startDate = $("#errorCycleStartDate").val();
+
+                if (name) $("#createCycleModal #name").val(name);
+                if (startDate) $("#createCycleModal #start_date").val(startDate);
+
+                $("#createCycleError .error-message").text(errorMessage);
+                $("#createCycleError").show();
+                $("#createCycleModal").modal("show");
+            } else if (errorAction === "edit_cycle") {
+                // Repopulate edit form fields
+                var editCycleId = $("#errorCycleId").val();
+                var editName = $("#errorCycleName").val();
+                var editStartDate = $("#errorCycleStartDate").val();
+
+                if (editCycleId) {
+                    $("#editCycleModal #edit_cycle_id").val(editCycleId);
+                    $("#editCycleModal #edit_name").val(editName);
+                    $("#editCycleModal #edit_start_date").val(editStartDate);
+                }
+
+                $("#editCycleError .error-message").text(errorMessage);
+                $("#editCycleError").show();
+                $("#editCycleModal").modal("show");
+            }
+        }
     }
 };
 ';
@@ -251,6 +323,8 @@ $template_data = array(
     'page_description' => $page_description,
     'success_message' => $success_message,
     'error_message' => $error_message,
+    'error_action' => $error_action,
+    'error_form_data' => $error_form_data,
     'cycles' => $cycles,
     'allowed_menu_perms' => $allowed_menu_perms,
     'user_id' => $user_id,
