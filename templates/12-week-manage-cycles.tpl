@@ -496,88 +496,91 @@ $is_admin = $this->body_template_data['is_admin'];
 <?php endif; ?>
 
 <script>
-/*$(document).ready(function() {
-    console.log('Cycle management page loaded');
-    
-    // Set minimum date to today for new cycles
-    var today = new Date().toISOString().split('T')[0];
-    $('#start_date').attr('min', today);
-    
-    // Helper function to get next Monday
-    function getNextMonday() {
-        var today = new Date();
-        var daysUntilMonday = (1 + 7 - today.getDay()) % 7;
-        if (daysUntilMonday === 0 && today.getDay() !== 1) {
-            daysUntilMonday = 7;
+$(document).ready(function() {
+    CycleManager.init();
+});
+
+var CycleManager = {
+    init: function() {
+        this.bindEvents();
+        this.checkForErrors();
+    },
+
+    bindEvents: function() {
+        // Edit cycle modal
+        $(document).on("click", ".btn-edit-cycle", function() {
+            var cycleId = $(this).data("cycle-id");
+            var name = $(this).data("name");
+            var startDate = $(this).data("start-date");
+
+            $("#editCycleModal #edit_cycle_id").val(cycleId);
+            $("#editCycleModal #edit_name").val(name);
+            $("#editCycleModal #edit_start_date").val(startDate);
+            $("#editCycleModal").modal("show");
+        });
+
+        // Close cycle confirmation
+        $(document).on("click", ".btn-close-cycle", function() {
+            var cycleId = $(this).data("cycle-id");
+            var name = $(this).data("name");
+
+            if (confirm("Are you sure you want to close the cycle: " + name + "?\\n\\nThis will mark it as completed and members will no longer be able to add goals or tasks.")) {
+                $("#closeCycleForm #close_cycle_id").val(cycleId);
+                $("#closeCycleForm").submit();
+            }
+        });
+
+        // Clear modals on close
+        $(".modal").on("hidden.bs.modal", function() {
+            $(this).find("form")[0].reset();
+        });
+
+        // Validate start date is Monday
+        $(document).on("change", "input[type=date]", function() {
+            var selectedDate = new Date($(this).val());
+            var dayOfWeek = selectedDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
+
+            if (dayOfWeek !== 1) { // Not Monday
+                alert("Start date must be a Monday. Please select a Monday.");
+                $(this).focus();
+            }
+        });
+    },
+
+    checkForErrors: function() {
+        // Check if there is an error message and which modal to reopen
+        var errorAction = $("#errorAction").val();
+        var errorMessage = $("#errorMessage").val();
+
+        if (errorMessage && errorAction) {
+            if (errorAction === "create_cycle") {
+                // Repopulate create form fields
+                var name = $("#errorCycleName").val();
+                var startDate = $("#errorCycleStartDate").val();
+
+                if (name) $("#createCycleModal #name").val(name);
+                if (startDate) $("#createCycleModal #start_date").val(startDate);
+
+                $("#createCycleError .error-message").text(errorMessage);
+                $("#createCycleError").show();
+                $("#createCycleModal").modal("show");
+            } else if (errorAction === "edit_cycle") {
+                // Repopulate edit form fields
+                var editCycleId = $("#errorCycleId").val();
+                var editName = $("#errorCycleName").val();
+                var editStartDate = $("#errorCycleStartDate").val();
+
+                if (editCycleId) {
+                    $("#editCycleModal #edit_cycle_id").val(editCycleId);
+                    $("#editCycleModal #edit_name").val(editName);
+                    $("#editCycleModal #edit_start_date").val(editStartDate);
+                }
+
+                $("#editCycleError .error-message").text(errorMessage);
+                $("#editCycleError").show();
+                $("#editCycleModal").modal("show");
+            }
         }
-        var nextMonday = new Date(today.getTime() + daysUntilMonday * 24 * 60 * 60 * 1000);
-        return nextMonday.toISOString().split('T')[0];
     }
-    
-    // Set default start date to next Monday
-    $('#start_date').val(getNextMonday());
-    
-    // Test modal functionality
-    $('#btnCreateCycle').click(function() {
-        console.log('Create cycle button clicked');
-        $('#createCycleModal').modal('show');
-    });
-    
-    // Edit cycle modal
-    $('.btn-edit-cycle').click(function() {
-        console.log('Edit cycle button clicked');
-        var cycleId = $(this).data('cycle-id');
-        var name = $(this).data('name');
-        var startDate = $(this).data('start-date');
-        
-        $('#editCycleModal #edit_cycle_id').val(cycleId);
-        $('#editCycleModal #edit_name').val(name);
-        $('#editCycleModal #edit_start_date').val(startDate);
-        $('#editCycleModal').modal('show');
-    });
-    
-    // Close cycle confirmation
-    $('.btn-close-cycle').click(function() {
-        var cycleId = $(this).data('cycle-id');
-        var name = $(this).data('name');
-        
-        if (confirm('Are you sure you want to close the cycle: ' + name + '?\n\nThis will mark it as completed and members will no longer be able to add goals or tasks.')) {
-            $('#closeCycleForm #close_cycle_id').val(cycleId);
-            $('#closeCycleForm').submit();
-        }
-    });
-    
-    // Reactivate cycle confirmation
-    $('.btn-reactivate-cycle').click(function() {
-        var cycleId = $(this).data('cycle-id');
-        var name = $(this).data('name');
-        
-        if (confirm('Are you sure you want to reactivate the cycle: ' + name + '?\n\nThis will make it the active cycle again.')) {
-            $('#reactivateCycleForm #reactivate_cycle_id').val(cycleId);
-            $('#reactivateCycleForm').submit();
-        }
-    });
-    
-    // Validate start date is Monday
-    $('input[type=date]').change(function() {
-        var selectedDate = new Date($(this).val());
-        var dayOfWeek = selectedDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
-        
-        if (dayOfWeek !== 1) { // Not Monday
-            alert('Start date must be a Monday. Please select a Monday.');
-            $(this).focus();
-        }
-    });
-    
-    // Form submission handling
-    $('#createCycleForm').submit(function(e) {
-        console.log('Create cycle form submitted');
-        // Let the form submit normally
-    });
-    
-    $('#editCycleForm').submit(function(e) {
-        console.log('Edit cycle form submitted');
-        // Let the form submit normally
-    });
-});*/
+};
 </script>
