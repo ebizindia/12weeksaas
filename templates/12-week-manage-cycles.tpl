@@ -496,91 +496,104 @@ $is_admin = $this->body_template_data['is_admin'];
 <?php endif; ?>
 
 <script>
-$(document).ready(function() {
-    CycleManager.init();
-});
-
-var CycleManager = {
-    init: function() {
-        this.bindEvents();
-        this.checkForErrors();
-    },
-
-    bindEvents: function() {
-        // Edit cycle modal
-        $(document).on("click", ".btn-edit-cycle", function() {
-            var cycleId = $(this).data("cycle-id");
-            var name = $(this).data("name");
-            var startDate = $(this).data("start-date");
-
-            $("#editCycleModal #edit_cycle_id").val(cycleId);
-            $("#editCycleModal #edit_name").val(name);
-            $("#editCycleModal #edit_start_date").val(startDate);
-            $("#editCycleModal").modal("show");
-        });
-
-        // Close cycle confirmation
-        $(document).on("click", ".btn-close-cycle", function() {
-            var cycleId = $(this).data("cycle-id");
-            var name = $(this).data("name");
-
-            if (confirm("Are you sure you want to close the cycle: " + name + "?\\n\\nThis will mark it as completed and members will no longer be able to add goals or tasks.")) {
-                $("#closeCycleForm #close_cycle_id").val(cycleId);
-                $("#closeCycleForm").submit();
-            }
-        });
-
-        // Clear modals on close
-        $(".modal").on("hidden.bs.modal", function() {
-            $(this).find("form")[0].reset();
-        });
-
-        // Validate start date is Monday
-        $(document).on("change", "input[type=date]", function() {
-            var selectedDate = new Date($(this).val());
-            var dayOfWeek = selectedDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
-
-            if (dayOfWeek !== 1) { // Not Monday
-                alert("Start date must be a Monday. Please select a Monday.");
-                $(this).focus();
-            }
-        });
-    },
-
-    checkForErrors: function() {
-        // Check if there is an error message and which modal to reopen
-        var errorAction = $("#errorAction").val();
-        var errorMessage = $("#errorMessage").val();
-
-        if (errorMessage && errorAction) {
-            if (errorAction === "create_cycle") {
-                // Repopulate create form fields
-                var name = $("#errorCycleName").val();
-                var startDate = $("#errorCycleStartDate").val();
-
-                if (name) $("#createCycleModal #name").val(name);
-                if (startDate) $("#createCycleModal #start_date").val(startDate);
-
-                $("#createCycleError .error-message").text(errorMessage);
-                $("#createCycleError").show();
-                $("#createCycleModal").modal("show");
-            } else if (errorAction === "edit_cycle") {
-                // Repopulate edit form fields
-                var editCycleId = $("#errorCycleId").val();
-                var editName = $("#errorCycleName").val();
-                var editStartDate = $("#errorCycleStartDate").val();
-
-                if (editCycleId) {
-                    $("#editCycleModal #edit_cycle_id").val(editCycleId);
-                    $("#editCycleModal #edit_name").val(editName);
-                    $("#editCycleModal #edit_start_date").val(editStartDate);
-                }
-
-                $("#editCycleError .error-message").text(errorMessage);
-                $("#editCycleError").show();
-                $("#editCycleModal").modal("show");
-            }
+(function() {
+    // Wait for jQuery to be available
+    function initWhenReady() {
+        if (typeof jQuery === 'undefined') {
+            setTimeout(initWhenReady, 50);
+            return;
         }
+
+        jQuery(document).ready(function($) {
+            var CycleManager = {
+                init: function() {
+                    this.bindEvents();
+                    this.checkForErrors();
+                },
+
+                bindEvents: function() {
+                    // Edit cycle modal
+                    $(document).on("click", ".btn-edit-cycle", function() {
+                        var cycleId = $(this).data("cycle-id");
+                        var name = $(this).data("name");
+                        var startDate = $(this).data("start-date");
+
+                        $("#editCycleModal #edit_cycle_id").val(cycleId);
+                        $("#editCycleModal #edit_name").val(name);
+                        $("#editCycleModal #edit_start_date").val(startDate);
+                        $("#editCycleModal").modal("show");
+                    });
+
+                    // Close cycle confirmation
+                    $(document).on("click", ".btn-close-cycle", function() {
+                        var cycleId = $(this).data("cycle-id");
+                        var name = $(this).data("name");
+
+                        if (confirm("Are you sure you want to close the cycle: " + name + "?\\n\\nThis will mark it as completed and members will no longer be able to add goals or tasks.")) {
+                            $("#closeCycleForm #close_cycle_id").val(cycleId);
+                            $("#closeCycleForm").submit();
+                        }
+                    });
+
+                    // Clear modals on close
+                    $(".modal").on("hidden.bs.modal", function() {
+                        $(this).find("form")[0].reset();
+                    });
+
+                    // Validate start date is Monday
+                    $(document).on("change", "input[type=date]", function() {
+                        var selectedDate = new Date($(this).val());
+                        var dayOfWeek = selectedDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
+
+                        if (dayOfWeek !== 1) { // Not Monday
+                            alert("Start date must be a Monday. Please select a Monday.");
+                            $(this).focus();
+                        }
+                    });
+                },
+
+                checkForErrors: function() {
+                    // Check if there is an error message and which modal to reopen
+                    var errorAction = $("#errorAction").val();
+                    var errorMessage = $("#errorMessage").val();
+
+                    if (errorMessage && errorAction) {
+                        if (errorAction === "create_cycle") {
+                            // Repopulate create form fields
+                            var name = $("#errorCycleName").val();
+                            var startDate = $("#errorCycleStartDate").val();
+
+                            if (name) $("#createCycleModal #name").val(name);
+                            if (startDate) $("#createCycleModal #start_date").val(startDate);
+
+                            $("#createCycleError .error-message").text(errorMessage);
+                            $("#createCycleError").show();
+                            $("#createCycleModal").modal("show");
+                        } else if (errorAction === "edit_cycle") {
+                            // Repopulate edit form fields
+                            var editCycleId = $("#errorCycleId").val();
+                            var editName = $("#errorCycleName").val();
+                            var editStartDate = $("#errorCycleStartDate").val();
+
+                            if (editCycleId) {
+                                $("#editCycleModal #edit_cycle_id").val(editCycleId);
+                                $("#editCycleModal #edit_name").val(editName);
+                                $("#editCycleModal #edit_start_date").val(editStartDate);
+                            }
+
+                            $("#editCycleError .error-message").text(errorMessage);
+                            $("#editCycleError").show();
+                            $("#editCycleModal").modal("show");
+                        }
+                    }
+                }
+            };
+
+            // Initialize
+            CycleManager.init();
+        });
     }
-};
+
+    initWhenReady();
+})();
 </script>
