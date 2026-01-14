@@ -20,6 +20,10 @@ define('CONST_ERROR_ALERT_RECP', [
     'bcc' =>['a@a.com'],
 ]);
 
+define('CONST_WAITLIST_REPORT_RECP', [
+	'to' =>['arun@ebizindia.com'],
+]);
+
 define('CONST_SEND_BDAY_ANNV_GREET', true); // set true to allow sending of automated birthday and anniversary email greetings, false otherwise
 // This software is supposed to be accessed from one or more fixed IPs only. 
 //For restricting access to any IP write the IP address on a new line within two single quotes, inside the square brackets below the comment line in the code below. Do not forget to put a comma after the closing single quote. To remove any IP restriction just remove all your IPs from the code below.
